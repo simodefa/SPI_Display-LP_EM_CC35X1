@@ -45,7 +45,7 @@
  *   ST7789 (240 px wide): 10 lines × 240 × 2 bytes = 4800 bytes
  *   ST7735 (128 px wide): 10 lines × 128 × 2 bytes = 2560 bytes
  */
-#define LV_DRAW_BUF_LINES 10
+#define LV_DRAW_BUF_LINES 240
 
 /* Static draw buffer — sized for the widest supported display (ST7789 240 px) */
 static lv_color_t draw_buf[LCD_WIDTH * LV_DRAW_BUF_LINES];
