@@ -55,9 +55,8 @@
 
 /* Swap the bytes of RGB565 color: needed because SPI sends MSB first
  * and the display expects big-endian but LVGL produces little-endian
- * 16-bit words on most architectures. The lvgl_port flush callback
- * handles the swap manually, so keep this 0. */
-#define LV_COLOR_16_SWAP 0
+ * 16-bit words on most architectures. */
+#define LV_COLOR_16_SWAP 1
 
 /*====================
  * MEMORY SETTINGS

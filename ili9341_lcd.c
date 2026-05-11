@@ -345,32 +345,20 @@ void LCD_fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
 void LCD_drawRegion(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
                     const uint16_t *pixels)
 {
-    trace_hi();
+    // trace_hi();
     LCD_setAddrWindow(x0, y0, x1, y1);
-    trace_lo();
+    // trace_lo();
 
-#define REGION_CHUNK 64
-    uint8_t buf[REGION_CHUNK * 2];
     int total = (int)(x1 - x0 + 1) * (int)(y1 - y0 + 1);
 
+    trace_hi();
 
-    for (int i = 0; i < total; i += REGION_CHUNK) {
-        trace_hi();
-        int n = total - i;
-        if (n > REGION_CHUNK) n = REGION_CHUNK;
-        for (int j = 0; j < n; j++) {
-            buf[j * 2]     = (uint8_t)(pixels[i + j] >> 8);
-            buf[j * 2 + 1] = (uint8_t)(pixels[i + j] & 0xFF);
-        }
-        trace_lo();
-
-        trace_hi();
-        LCD_dc_hi();
-        LCD_cs_lo();
-        LCD_spiWrite(buf, (size_t)(n * 2));
-        trace_lo();
-    }
+    LCD_dc_hi();
+    LCD_cs_lo();
+    LCD_spiWrite((uint8_t *)pixels, (size_t)(total * 2));
     LCD_cs_hi();
+
+    trace_lo();
 }
 
 /* -----------------------------------------------------------------------
