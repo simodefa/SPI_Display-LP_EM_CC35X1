@@ -1,26 +1,28 @@
 /**
  * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
  * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
- * @cliArgs --board "/ti/boards/LP_EM_CC35X1" --rtos "freertos" --product "simplelink_wifi_sdk@10.10.00.18" --product "TOOLBOX@4.1.16"
- * @v2CliArgs --board "/ti/boards/LP_EM_CC35X1" --rtos "freertos" --product "simplelink_wifi_sdk@10.10.00.18" --product "TOOLBOX@4.1.16"
+ * @cliArgs --board "/ti/boards/LP_EM_CC35X1" --rtos "freertos" --product "simplelink_wifi_sdk@9.22.00.15" --product "TOOLBOX@4.1.8"
+ * @v2CliArgs --board "/ti/boards/LP_EM_CC35X1" --rtos "freertos" --product "simplelink_wifi_sdk@9.22.00.15" --product "TOOLBOX@4.1.8"
  * @versions {"tool":"1.27.0+4565"}
  */
 
 /**
  * Import the modules used in this configuration.
  */
-const FreeRTOS = scripting.addModule("/freertos/FreeRTOS");
-const Display  = scripting.addModule("/ti/display/Display");
-const Display1 = Display.addInstance();
-const GPIO     = scripting.addModule("/ti/drivers/GPIO");
-const GPIO2    = GPIO.addInstance();
-const GPIO3    = GPIO.addInstance();
-const GPIO4    = GPIO.addInstance();
-const GPIO5    = GPIO.addInstance();
-const GPIO6    = GPIO.addInstance();
-const SPI      = scripting.addModule("/ti/drivers/SPI");
-const SPI1     = SPI.addInstance();
-const Settings = scripting.addModule("/ti/posix/freertos/Settings");
+const FreeRTOS  = scripting.addModule("/freertos/FreeRTOS");
+const Display   = scripting.addModule("/ti/display/Display");
+const Display1  = Display.addInstance();
+const GPIO      = scripting.addModule("/ti/drivers/GPIO");
+const GPIO1     = GPIO.addInstance();
+const GPIO2     = GPIO.addInstance();
+const GPIO3     = GPIO.addInstance();
+const GPIO4     = GPIO.addInstance();
+const GPIO5     = GPIO.addInstance();
+const GPIO10    = GPIO.addInstance();
+const SPI       = scripting.addModule("/ti/drivers/SPI");
+const SPI1      = SPI.addInstance();
+const Settings  = scripting.addModule("/ti/posix/freertos/Settings");
+const ActionReq = scripting.addModule("/ti/vendorutils/Action/ActionReq");
 
 /**
  * Write custom configuration values to the imported modules.
@@ -29,36 +31,36 @@ Display1.$name      = "CONFIG_Display_0";
 Display1.$hardware  = system.deviceData.board.components.XDS110UART;
 Display1.uart.$name = "CONFIG_UART2_0";
 
-GPIO2.$name           = "CONFIG_SPI_CONTROLLER_READY";
-GPIO2.gpioPin.$assign = "boosterpack.40";
-scripting.suppress("Connected to hardware,@@@.+?@@@ is connected to LaunchPad Button BTN-2 \\(Right\\) on the CC35X1 LaunchPad\\. Consider selecting it in \'use hardware\' above\\. @@@.+?@@@", GPIO2, "gpioPin");
+GPIO1.$name           = "CONFIG_SPI_CONTROLLER_READY";
+GPIO1.gpioPin.$assign = "boosterpack.40";
 
-GPIO3.$name           = "CONFIG_SPI_PERIPHERAL_READY";
-GPIO3.gpioPin.$assign = "boosterpack.19";
-scripting.suppress("Connected to hardware,@@@.+?@@@ is connected to LaunchPad Button BTN-1 \\(Left\\) on the CC35X1 LaunchPad\\. Consider selecting it in \'use hardware\' above\\. @@@.+?@@@", GPIO3, "gpioPin");
+GPIO2.$name           = "CONFIG_SPI_PERIPHERAL_READY";
+GPIO2.gpioPin.$assign = "boosterpack.19";
 
-GPIO4.$name           = "CONFIG_GPIO_LCD_CS";
-GPIO4.gpioPin.$assign = "boosterpack.13";
-scripting.suppress("Connected to hardware,@@@.+?@@@ is connected to LaunchPad SPI Bus on the CC35X1 LaunchPad\\. Consider selecting it in \'use hardware\' above\\. @@@.+?@@@", GPIO4, "gpioPin");
+GPIO3.$name           = "CONFIG_GPIO_LCD_CS";
+GPIO3.gpioPin.$assign = "boosterpack.13";
 
-GPIO5.$name           = "CONFIG_GPIO_LCD_DC";
-GPIO5.gpioPin.$assign = "boosterpack.31";
-scripting.suppress("Connected to hardware,@@@.+?@@@ is connected to LaunchPad CAN Bus on the CC35X1 LaunchPad\\. Consider selecting it in \'use hardware\' above\\. @@@.+?@@@", GPIO5, "gpioPin");
+GPIO4.$name           = "CONFIG_GPIO_LCD_DC";
+GPIO4.gpioPin.$assign = "boosterpack.31";
 
-GPIO6.$name           = "CONFIG_GPIO_LCD_RST";
-GPIO6.gpioPin.$assign = "boosterpack.17";
-scripting.suppress("Connected to hardware,@@@.+?@@@ is connected to LaunchPad CAN Bus on the CC35X1 LaunchPad\\. Consider selecting it in \'use hardware\' above\\. @@@.+?@@@", GPIO6, "gpioPin");
+GPIO5.$name           = "CONFIG_GPIO_LCD_RST";
+GPIO5.gpioPin.$assign = "boosterpack.17";
+
+GPIO10.$name           = "CONFIG_GPIO_TRACE";
+GPIO10.mode            = "Output";
+GPIO10.gpioPin.$assign = "boosterpack.38";
 
 SPI1.$name                    = "CONFIG_SPI_LCD";
 SPI1.spi.sclkPin.$assign      = "boosterpack.7";
 SPI1.spi.dmaRxChannel.$assign = "DMA_CH11";
 SPI1.spi.dmaTxChannel.$assign = "DMA_CH10";
 SPI1.spi.picoPin.$assign      = "boosterpack.15";
-scripting.suppress("Connected to hardware,@@@.+?@@@ is connected to LaunchPad SPI Bus on the CC35X1 LaunchPad\\. Consider selecting it in \'use hardware\' above\\. @@@.+?@@@", SPI1.spi, "sclkPin");
-scripting.suppress("Connected to hardware,@@@.+?@@@ is connected to LaunchPad SPI Bus on the CC35X1 LaunchPad\\. Consider selecting it in \'use hardware\' above\\. @@@.+?@@@", SPI1.spi, "picoPin");
 
-const ActionReq = scripting.addModule("/ti/vendorutils/Action/ActionReq", {}, false);
-ActionReq.ota   = true;
+ActionReq.ota             = true;
+ActionReq.activation_type = "authentication_bypass";
+ActionReq.boot_sector     = false;
+ActionReq.primary_tbl     = false;
+ActionReq.primary_ti_wsoc = false;
 
 /**
  * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
