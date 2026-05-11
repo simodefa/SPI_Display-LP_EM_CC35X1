@@ -59,6 +59,8 @@
 #include "st7789_lcd.h"
 #elif defined(USE_ST7735)
 #include "st7735_lcd.h"
+#elif defined(USE_ILI9341)
+#include "ili9341_lcd.h"
 #else
 #error "No display configured! Edit display_config.h to select ST7789 or ST7735"
 #endif
@@ -217,6 +219,9 @@ void *displayThread(void *arg0)
 #endif
 #ifdef USE_ST7735
     Display_printf(display, 0, 0, "Display: ST7735 (128x128 pixels)");
+#endif
+#ifdef USE_ILI9341
+    Display_printf(display, 0, 0, "Display: ILI9341 (240x320 pixels)");
 #endif
 #ifdef USE_LVGL
     Display_printf(display, 0, 0, "Renderer: LVGL v9");

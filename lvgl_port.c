@@ -35,6 +35,8 @@
 #include "st7789_lcd.h"
 #elif defined(USE_ST7735)
 #include "st7735_lcd.h"
+#elif defined(USE_ILI9341)
+#include "ili9341_lcd.h"
 #endif
 
 /*
