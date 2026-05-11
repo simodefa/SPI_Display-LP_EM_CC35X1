@@ -77,8 +77,8 @@ static void LCD_dc_hi(void)  { GPIO_write(CONFIG_GPIO_LCD_DC,  1); } /* data    
 static void LCD_rst_lo(void) { GPIO_write(CONFIG_GPIO_LCD_RST, 0); }
 static void LCD_rst_hi(void) { GPIO_write(CONFIG_GPIO_LCD_RST, 1); }
 
-static void trace_hi(void) { GPIO_write(CONFIG_GPIO_TRACE, 0); }
-static void trace_lo(void) { GPIO_write(CONFIG_GPIO_TRACE, 1); }
+static void trace_hi(void) { GPIO_write(CONFIG_GPIO_TRACE, 1); }
+static void trace_lo(void) { GPIO_write(CONFIG_GPIO_TRACE, 0); }
 
 static void LCD_spiWrite(const uint8_t *buf, size_t len)
 {
