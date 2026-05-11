@@ -69,6 +69,7 @@
 #ifdef USE_LVGL
 #include "lvgl.h"
 #include "lvgl_port.h"
+#include "demos/lv_demos.h"
 #endif
 
 #define THREADSTACKSIZE (8192)  /* LVGL requires significant stack for rendering */
@@ -176,6 +177,14 @@ static void lvgl_demo_update(uint32_t render_ms)
             lv_label_set_text_fmt(g_label_fps, "%lu ms/frame", (unsigned long)render_ms);
     }
 }
+
+#if LV_USE_LOG
+void print_cb(lv_log_level_t level, const char * buf)
+{
+    LV_UNUSED(level);
+    Display_printf(display, 0, 0, "\r%s\n", buf);
+}
+#endif
 #endif /* USE_LVGL */
 
 /* Color palette */
@@ -235,8 +244,13 @@ void *displayThread(void *arg0)
     lv_init();
     lvgl_port_init();
 
+#if LV_USE_LOG
+    lv_log_register_print_cb(print_cb);
+#endif
+
     /* Build the demo UI (replace with ui_init() for SquareLine projects) */
-    lvgl_demo_create();
+    // lvgl_demo_create();
+    lv_demo_benchmark();
 
     Display_printf(display, 0, 0, "LVGL ready. Running UI loop.");
 
@@ -245,6 +259,7 @@ void *displayThread(void *arg0)
 
     while (1)
     {
+#if 0
         /* Drive LVGL rendering and animation engine */
         lv_timer_handler();
 
@@ -270,6 +285,9 @@ void *displayThread(void *arg0)
         }
 
         usleep(5000);  /* 5 ms — yields to other tasks between renders */
+#endif
+
+        usleep(lv_timer_handler() * 1000);
     }
 
 #else

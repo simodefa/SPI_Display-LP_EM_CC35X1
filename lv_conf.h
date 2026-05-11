@@ -20,13 +20,31 @@
  */
 #define LV_KCONFIG_IGNORE
 
-/*
- * Disable example builds. Without this, lv_conf_internal.h defaults
- * LV_BUILD_EXAMPLES to 1 (when not using Kconfig), which causes all
- * files under lvgl/examples/ to compile and produce errors on this
- * toolchain. Setting it to 0 makes those files compile to nothing.
- */
-#define LV_BUILD_EXAMPLES 0
+
+#define LV_USE_SYSMON 1
+#define LV_USE_PERF_MONITOR 1
+
+/*=====================
+* BUILD OPTIONS
+*======================*/
+
+/** Enable examples to be built with the library. */
+#define LV_BUILD_EXAMPLES 1
+
+/** Build the demos */
+#define LV_BUILD_DEMOS 1
+
+/*===================
+ * DEMO USAGE
+ ====================*/
+
+ #if LV_BUILD_DEMOS
+    /** Show some widgets. This might be required to increase `LV_MEM_SIZE`. */
+    #define LV_USE_DEMO_WIDGETS 1
+
+    /** Benchmark your system */
+    #define LV_USE_DEMO_BENCHMARK 1
+#endif
 
 /*====================
  * COLOR SETTINGS
@@ -48,7 +66,7 @@
 /* LVGL internal heap size (bytes).
  * CC3551E has 256 KB SRAM. Allocate 48 KB for LVGL.
  * Increase if you get "lv_mem: couldn't allocate memory" assertions. */
-#define LV_MEM_SIZE (48 * 1024U)
+#define LV_MEM_SIZE (128 * 1024U)
 
 /* Use built-in memory allocator */
 #define LV_MEM_CUSTOM 0
@@ -83,12 +101,46 @@
  *====================*/
 
 /* Disable logging in production to save code/RAM */
-#define LV_USE_LOG 0
+#define LV_USE_LOG 1
 
-/* If you enable logging (LV_USE_LOG 1), set the level here:
- * LV_LOG_LEVEL_TRACE / INFO / WARN / ERROR / USER / NONE
- * Note: when LV_USE_LOG is 0, lv_conf_internal.h forces this to
- * LV_LOG_LEVEL_NONE unconditionally, so do not define it here. */
+#if LV_USE_LOG
+    /** Set value to one of the following levels of logging detail:
+     *  - LV_LOG_LEVEL_TRACE    Log detailed information.
+     *  - LV_LOG_LEVEL_INFO     Log important events.
+     *  - LV_LOG_LEVEL_WARN     Log if something unwanted happened but didn't cause a problem.
+     *  - LV_LOG_LEVEL_ERROR    Log only critical issues, when system may fail.
+     *  - LV_LOG_LEVEL_USER     Log only custom log messages added by the user.
+     *  - LV_LOG_LEVEL_NONE     Do not log anything. */
+    #define LV_LOG_LEVEL LV_LOG_LEVEL_WARN
+
+    /** - 1: Print log with 'printf';
+     *  - 0: User needs to register a callback with `lv_log_register_print_cb()`. */
+    #define LV_LOG_PRINTF 0
+
+    /** Set callback to print logs.
+     *  E.g `my_print`. The prototype should be `void my_print(lv_log_level_t level, const char * buf)`.
+     *  Can be overwritten by `lv_log_register_print_cb`. */
+    //#define LV_LOG_PRINT_CB
+
+    /** - 1: Enable printing timestamp;
+     *  - 0: Disable printing timestamp. */
+    #define LV_LOG_USE_TIMESTAMP 1
+
+    /** - 1: Print file and line number of the log;
+     *  - 0: Do not print file and line number of the log. */
+    #define LV_LOG_USE_FILE_LINE 1
+
+    /* Enable/disable LV_LOG_TRACE in modules that produces a huge number of logs. */
+    #define LV_LOG_TRACE_MEM        1   /**< Enable/disable trace logs in memory operations. */
+    #define LV_LOG_TRACE_TIMER      1   /**< Enable/disable trace logs in timer operations. */
+    #define LV_LOG_TRACE_INDEV      1   /**< Enable/disable trace logs in input device operations. */
+    #define LV_LOG_TRACE_DISP_REFR  1   /**< Enable/disable trace logs in display re-draw operations. */
+    #define LV_LOG_TRACE_EVENT      1   /**< Enable/disable trace logs in event dispatch logic. */
+    #define LV_LOG_TRACE_OBJ_CREATE 1   /**< Enable/disable trace logs in object creation (core `obj` creation plus every widget). */
+    #define LV_LOG_TRACE_LAYOUT     1   /**< Enable/disable trace logs in flex- and grid-layout operations. */
+    #define LV_LOG_TRACE_ANIM       1   /**< Enable/disable trace logs in animation logic. */
+    #define LV_LOG_TRACE_CACHE      1   /**< Enable/disable trace logs in cache operations. */
+#endif  /*LV_USE_LOG*/
 
 /*====================
  * ASSERTS
@@ -117,10 +169,10 @@
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_16 1
 #define LV_FONT_MONTSERRAT_18 0
-#define LV_FONT_MONTSERRAT_20 0
+#define LV_FONT_MONTSERRAT_20 1
 #define LV_FONT_MONTSERRAT_22 0
-#define LV_FONT_MONTSERRAT_24 0
-#define LV_FONT_MONTSERRAT_26 0
+#define LV_FONT_MONTSERRAT_24 1
+#define LV_FONT_MONTSERRAT_26 1
 #define LV_FONT_MONTSERRAT_28 0
 #define LV_FONT_MONTSERRAT_30 0
 #define LV_FONT_MONTSERRAT_32 0
@@ -148,18 +200,18 @@
 #define LV_USE_ARC          1
 #define LV_USE_BAR          1
 #define LV_USE_BTN          1
-#define LV_USE_BTNMATRIX    0
-#define LV_USE_CANVAS       0
-#define LV_USE_CHECKBOX     0
-#define LV_USE_DROPDOWN     0
+#define LV_USE_BTNMATRIX    1
+#define LV_USE_CANVAS       1
+#define LV_USE_CHECKBOX     1
+#define LV_USE_DROPDOWN     1
 #define LV_USE_IMG          1
 #define LV_USE_LABEL        1
 #define LV_USE_LINE         1
-#define LV_USE_ROLLER       0
+#define LV_USE_ROLLER       1
 #define LV_USE_SLIDER       1
-#define LV_USE_SWITCH       0
-#define LV_USE_TEXTAREA     0
-#define LV_USE_TABLE        0
+#define LV_USE_SWITCH       1
+#define LV_USE_TEXTAREA     1
+#define LV_USE_TABLE        1
 
 /*====================
  * THEMES
@@ -178,29 +230,29 @@
  *====================*/
 
 #define LV_USE_FLEX  1
-#define LV_USE_GRID  0
+#define LV_USE_GRID  1
 
 /*====================
  * EXTRA COMPONENTS
  *====================*/
 
-#define LV_USE_ANIMIMG      0
-#define LV_USE_CALENDAR     0
-#define LV_USE_CHART        0
-#define LV_USE_COLORWHEEL   0
-#define LV_USE_IMGBTN       0
-#define LV_USE_KEYBOARD     0
+#define LV_USE_ANIMIMG      1
+#define LV_USE_CALENDAR     1
+#define LV_USE_CHART        1
+#define LV_USE_COLORWHEEL   1
+#define LV_USE_IMGBTN       1
+#define LV_USE_KEYBOARD     1
 #define LV_USE_LED          1
-#define LV_USE_LIST         0
-#define LV_USE_MENU         0
-#define LV_USE_METER        0
-#define LV_USE_MSGBOX       0
-#define LV_USE_SPAN         0
-#define LV_USE_SPINBOX      0
+#define LV_USE_LIST         1
+#define LV_USE_MENU         1
+#define LV_USE_METER        1
+#define LV_USE_MSGBOX       1
+#define LV_USE_SPAN         1
+#define LV_USE_SPINBOX      1
 #define LV_USE_SPINNER      1
-#define LV_USE_TABVIEW      0
-#define LV_USE_TILEVIEW     0
-#define LV_USE_WIN          0
+#define LV_USE_TABVIEW      1
+#define LV_USE_TILEVIEW     1
+#define LV_USE_WIN          1
 
 /*====================
  * SquareLine Studio
@@ -230,6 +282,29 @@
 /* Place draw buffers in specific RAM section if needed.
  * Leave empty to use default heap. */
 #define LV_ATTRIBUTE_MEM_FAST
+
+
+/*==================
+ * OTHERS
+ *==================*/
+
+/** 1: Enable system monitor component */
+#define LV_USE_SYSMON 1
+#if LV_USE_SYSMON
+    /** Get the idle percentage. E.g. uint32_t my_get_idle(void); */
+    // #define LV_SYSMON_GET_IDLE lv_os_get_idle_percent
+
+    /** 1: Show CPU usage and FPS count.
+     *  - Requires `LV_USE_SYSMON = 1` */
+    #define LV_USE_PERF_MONITOR 1
+    #if LV_USE_PERF_MONITOR
+        #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
+
+        /** 0: Displays performance data on the screen; 1: Prints performance data using log. */
+        #define LV_USE_PERF_MONITOR_LOG_MODE 0
+    #endif
+#endif /*LV_USE_SYSMON*/
+
 
 #endif /* LV_CONF_H */
 #endif /* lv_conf.h end */
