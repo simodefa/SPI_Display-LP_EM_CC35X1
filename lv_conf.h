@@ -74,15 +74,11 @@
  * HAL SETTINGS
  *====================*/
 
-/* Tick source: manual lv_tick_inc() calls from a FreeRTOS timer task.
- * See lvgl_port.c for the tick task implementation. */
-#define LV_TICK_CUSTOM 0
-
 /* Default display refresh period in ms (how often lv_timer_handler is called) */
 #define LV_DEF_REFR_PERIOD 33  /* ~30 Hz refresh */
 
 /* Dot-per-inch of the display for DPI-aware sizing */
-#define LV_DPI_DEF 130
+#define LV_DPI_DEF 114
 
 /*====================
  * DRAW SETTINGS
