@@ -117,9 +117,6 @@ static void LCD_writeDataByte(uint8_t b)
  * ----------------------------------------------------------------------- */
 void LCD_init(void)
 {
-    /* Open SPI */
-    SPI_init();
-
     SPI_Params spiParams;
     SPI_Params_init(&spiParams);
     spiParams.bitRate     = 32000000;
@@ -127,6 +124,11 @@ void LCD_init(void)
     spiParams.mode        = SPI_CONTROLLER;
     spiParams.dataSize    = 8;
     gSpiHandle = SPI_open(CONFIG_SPI_LCD, &spiParams);
+    /* SPI_open() returns NULL if the peripheral is unavailable.
+     * Trap here rather than silently hard-faulting on the first SPI transfer. */
+    if (gSpiHandle == NULL) {
+        while (1) {}   /* attach debugger or check SPI_init()/SysConfig */
+    }
 
     /* Hardware reset */
     LCD_rst_hi();
@@ -136,9 +138,9 @@ void LCD_init(void)
     LCD_rst_hi();
     usleep(150000);
 
-    // /* Software reset */
-    // LCD_writeCmd(ILI9341_CMD_RST);
-    // usleep(150000);
+    /* Software reset */
+    LCD_writeCmd(ILI9341_CMD_RST);
+    usleep(150000);
 
     /* Display off */
     LCD_writeCmd(ILI9341_CMD_DISPLAYOFF);
@@ -271,9 +273,6 @@ void LCD_init(void)
     /* Display on */
     LCD_writeCmd(ILI9341_CMD_DISPLAYON);
     usleep(10000);
-
-    /* White background */
-    LCD_fillScreen(LCD_COLOR_WHITE);
 }
 
 /* -----------------------------------------------------------------------
