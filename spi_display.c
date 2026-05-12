@@ -403,24 +403,9 @@ void *mainThread(void *arg0)
         while (1) {}
     }
 
-#ifdef USE_LVGL
-    /* Create LVGL tick task at highest priority — must run every 1 ms */
-    {
-        pthread_t tickThread;
-        pthread_attr_t tickAttrs;
-        struct sched_param tickPri;
-        pthread_attr_init(&tickAttrs);
-        pthread_attr_setdetachstate(&tickAttrs, PTHREAD_CREATE_DETACHED);
-        pthread_attr_setstacksize(&tickAttrs, 512);
-        tickPri.sched_priority = 2;  /* above display thread (1); FreeRTOS max is 9 */
-        pthread_attr_setschedparam(&tickAttrs, &tickPri);
-        retc = pthread_create(&tickThread, &tickAttrs, lvgl_port_tick_task, NULL);
-        if (retc != 0) { while (1) {} }
-    }
-#endif /* USE_LVGL */
 
     /* Create display thread */
-    priParam.sched_priority = 1;
+    priParam.sched_priority = 2;
     pthread_attr_setschedparam(&attrs, &priParam);
 
     retc = pthread_create(&thread0, &attrs, displayThread, NULL);

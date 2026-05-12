@@ -30,6 +30,15 @@
 #include <stdint.h>
 #include <unistd.h>
 
+/* FreeRTOS tick counter used as LVGL time base */
+#include <FreeRTOS.h>
+#include <task.h>
+
+static uint32_t lvgl_tick_cb(void)
+{
+    return (uint32_t)xTaskGetTickCount();
+}
+
 /* Pull in the active LCD driver header (LCD_WIDTH, LCD_HEIGHT, LCD_drawContentFrame) */
 #ifdef USE_ST7789
 #include "st7789_lcd.h"
@@ -81,6 +90,8 @@ static void lvgl_flush_cb(lv_display_t *disp,
  * ----------------------------------------------------------------------- */
 void lvgl_port_init(void)
 {
+    lv_tick_set_cb(lvgl_tick_cb);
+
     /* Create display object matching physical dimensions */
     lv_display_t *disp = lv_display_create(LCD_WIDTH, LCD_HEIGHT);
 
@@ -98,22 +109,6 @@ void lvgl_port_init(void)
     lv_display_set_buffers(disp, draw_buf, NULL,
                            sizeof(draw_buf),
                            LV_DISPLAY_RENDER_MODE_PARTIAL);
-}
-
-/* -----------------------------------------------------------------------
- * LVGL tick task
- *
- * Runs as a FreeRTOS/POSIX thread.  Sleeps 1 ms per iteration and calls
- * lv_tick_inc(1) to advance LVGL's internal time base.
- * ----------------------------------------------------------------------- */
-void *lvgl_port_tick_task(void *arg)
-{
-    (void)arg;
-    while (1) {
-        usleep(1000);       /* 1 ms */
-        lv_tick_inc(1);
-    }
-    return NULL;
 }
 
 #endif /* USE_LVGL */

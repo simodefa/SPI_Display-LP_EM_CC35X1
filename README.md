@@ -322,7 +322,6 @@ Application
 **Threads:**
 - `mainThread()` — initializes drivers; creates display thread and (if LVGL) tick thread
 - `displayThread()` — animation loop or LVGL task pump
-- `lvgl_port_tick_task()` — (LVGL only) increments LVGL time base every 1 ms
 
 ---
 
