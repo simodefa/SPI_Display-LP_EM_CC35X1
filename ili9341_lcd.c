@@ -119,7 +119,7 @@ void LCD_init(void)
 {
     SPI_Params spiParams;
     SPI_Params_init(&spiParams);
-    spiParams.bitRate     = 32000000;
+    spiParams.bitRate     = 80000000;
     spiParams.frameFormat = SPI_POL1_PHA1;
     spiParams.mode        = SPI_CONTROLLER;
     spiParams.dataSize    = 8;
