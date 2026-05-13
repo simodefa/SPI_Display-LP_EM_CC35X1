@@ -53,11 +53,6 @@
 /* Color depth matching ST7789/ST7735 RGB565 format */
 #define LV_COLOR_DEPTH 16
 
-/* Swap the bytes of RGB565 color: needed because SPI sends MSB first
- * and the display expects big-endian but LVGL produces little-endian
- * 16-bit words on most architectures. */
-#define LV_COLOR_16_SWAP 1
-
 /*====================
  * MEMORY SETTINGS
  *====================*/
@@ -75,7 +70,7 @@
  *====================*/
 
 /* Default display refresh period in ms (how often lv_timer_handler is called) */
-#define LV_DEF_REFR_PERIOD 33  /* ~30 Hz refresh */
+#define LV_DEF_REFR_PERIOD 1  /* ~30 Hz refresh */
 
 /* Dot-per-inch of the display for DPI-aware sizing */
 #define LV_DPI_DEF 114

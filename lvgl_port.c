@@ -96,7 +96,7 @@ void lvgl_port_init(void)
     lv_display_t *disp = lv_display_create(LCD_WIDTH, LCD_HEIGHT);
 
     /* Set color format — RGB565 matches both ST7789 and ST7735 */
-    lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565);
+    lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565_SWAPPED);
 
     /* Register flush callback */
     lv_display_set_flush_cb(disp, lvgl_flush_cb);
