@@ -48,6 +48,7 @@
 /* Driver Header files */
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/SPI.h>
+#include <ti/drivers/PWM.h>
 #include <ti/display/Display.h>
 
 /* Driver configuration */
@@ -78,6 +79,10 @@
     #define CONFIG_GPIO_LED_0 GPIO_INVALID_INDEX
     #define CONFIG_GPIO_LED_1 GPIO_INVALID_INDEX
 #endif
+
+static void LCD_vcc_on(void) { GPIO_write(CONFIG_EN_3V3_TFT, 1); }
+static void LCD_backlight_on(void) { GPIO_write(CONFIG_PWM_BLK, 1); }
+
 
 static Display_Handle display;
 
@@ -211,6 +216,26 @@ void draw_color_bar_pattern(void)
  */
 void *displayThread(void *arg0)
 {
+    /* Turn on TFT controller VCC */
+    LCD_vcc_on();
+
+    /* Setup backligh PWM */
+    // PWM_init();
+
+    // PWM_Params pwm_params;
+    // PWM_Params_init(&pwm_params);
+    // pwm_params.dutyValue = 50;
+    // pwm_params.periodValue = 1000;
+    
+    // PWM_Handle pwm_handle = PWM_open(CONFIG_PWM_BLK, &pwm_params);
+    // if (pwm_handle == NULL) {
+    //     // PWM_open() failed
+    //     while (1);
+    // }
+    // PWM_start(pwm_handle);
+    LCD_backlight_on();
+
+
     /* Initialize the LCD */
     LCD_init();
 

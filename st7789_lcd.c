@@ -24,9 +24,9 @@
 #define ST7789_NOP      0x00
 #define ST7789_SWRESET  0x01
 #define ST7789_SLPOUT   0x11
-#define ST7789_NORON    0x13
 #define ST7789_INVOFF   0x20
-#define ST7789_INVON    0x21   /* Display inversion ON: corrects ST7789 natural inversion */
+#define ST7789_INVON    0x21   /* Display inversion ON */
+#define ST7789_GAMSET   0x26   /* Gamma set */
 #define ST7789_DISPOFF  0x28
 #define ST7789_DISPON   0x29
 #define ST7789_CASET    0x2A   /* Column address set */
@@ -34,7 +34,10 @@
 #define ST7789_RAMWR    0x2C   /* Memory write */
 #define ST7789_MADCTL   0x36   /* Memory data access control */
 #define ST7789_COLMOD   0x3A   /* Interface pixel format */
+#define ST7789_RAMCTRL  0xB0   /* RAM control */
 #define ST7789_PORCTRL  0xB2   /* Porch setting */
+#define ST7789_CMD2EN   0xDF   /* CMD2 enable */
+#define ST7789_DGMEN    0xBA   /* Digital gamma enable */
 #define ST7789_GCTRL    0xB7   /* Gate control */
 #define ST7789_VCOMS    0xBB   /* VCOMS setting */
 #define ST7789_LCMCTRL  0xC0   /* LCM control */
@@ -111,102 +114,122 @@ void LCD_init(void)
 
     SPI_Params spiParams;
     SPI_Params_init(&spiParams);
-    spiParams.bitRate     = 40000000;  /* 40 MHz - ST7789 supports up to 62.5 MHz, CC3551E limited to 40 MHz */
-    spiParams.frameFormat = SPI_POL0_PHA0;
+    spiParams.bitRate     = 80000000;  /* 40 MHz - ST7789 supports up to 62.5 MHz, CC3551E limited to 40 MHz */
+    spiParams.frameFormat = SPI_POL1_PHA1;
     spiParams.mode        = SPI_CONTROLLER;
     spiParams.dataSize    = 8;
     gSpiHandle = SPI_open(CONFIG_SPI_LCD, &spiParams);
 
-    /* Hardware reset */
+    /* Hardware reset: 1 ms pre-delay, 6 ms low pulse, 20 ms recovery */
+    usleep(1000);
     LCD_rst_hi();
     usleep(5000);
     LCD_rst_lo();
-    usleep(20000);
+    usleep(1000);
     LCD_rst_hi();
-    usleep(150000);
-
-    /* Software reset */
-    LCD_writeCmd(ST7789_SWRESET);
-    usleep(150000);
-
-    /* Sleep out - datasheet requires min 120 ms before next command */
-    LCD_writeCmd(ST7789_SLPOUT);
     usleep(120000);
 
-    /* Pixel format: 16-bit RGB565 for both MCU and RGB interfaces (0x55) */
-    LCD_writeCmd(ST7789_COLMOD);
-    LCD_writeDataByte(0x55);
+    /* Display off before configuring */
+    LCD_writeCmd(ST7789_DISPOFF);
 
-    /* Porch control: back/front porch and separate porch settings */
+    /* CMD2 enable */
+    LCD_writeCmd(ST7789_CMD2EN);
+    {
+        const uint8_t d[] = {0x5A, 0x69, 0x02, 0x01};
+        LCD_writeData(d, sizeof(d));
+    }
+
+    /* Porch control */
     LCD_writeCmd(ST7789_PORCTRL);
     {
         const uint8_t d[] = {0x0C, 0x0C, 0x00, 0x33, 0x33};
         LCD_writeData(d, sizeof(d));
     }
 
+    /* Digital gamma enable: disabled */
+    LCD_writeCmd(ST7789_DGMEN);
+    LCD_writeDataByte(0x00);
+
+    /* Frame rate control in normal mode: 60 Hz */
+    LCD_writeCmd(ST7789_FRCTRL2);
+    LCD_writeDataByte(0x0F);
+
     /* Gate control */
     LCD_writeCmd(ST7789_GCTRL);
     LCD_writeDataByte(0x35);
 
-    /* VCOMS: 0.925 V */
+    /* VCOMS: 0.725 V */
     LCD_writeCmd(ST7789_VCOMS);
-    LCD_writeDataByte(0x28);
-
-    /* LCM control */
-    LCD_writeCmd(ST7789_LCMCTRL);
-    LCD_writeDataByte(0x0C);
+    LCD_writeDataByte(0x22);
 
     /* VDV and VRH register write enable */
     LCD_writeCmd(ST7789_VDVVRHEN);
     LCD_writeDataByte(0x01);
-    LCD_writeDataByte(0xFF);
 
-    /* VRH: 4.45 V + (vcom + vcom offset + 0.5 vdv) */
+    /* VRH set */
     LCD_writeCmd(ST7789_VRHS);
-    LCD_writeDataByte(0x10);
+    LCD_writeDataByte(0x28);
 
-    /* VDV: 0 V */
+    /* VDV set */
     LCD_writeCmd(ST7789_VDVS);
-    LCD_writeDataByte(0x20);
+    LCD_writeDataByte(0x22);
 
-    /* Frame rate: 60 Hz in normal mode */
-    LCD_writeCmd(ST7789_FRCTRL2);
-    LCD_writeDataByte(0x0F);
-
-    /* Power control 1: AVDD 6.8V, AVCL -4.8V, VDDS 2.3V */
+    /* Power control 1 */
     LCD_writeCmd(ST7789_PWCTRL1);
-    LCD_writeDataByte(0xA4); LCD_writeDataByte(0xA1);
+    {
+        const uint8_t d[] = {0xA4, 0xA1};
+        LCD_writeData(d, sizeof(d));
+    }
 
-    /* Memory data access control: BGR panel order, portrait */
+    /* Memory data access control */
     LCD_writeCmd(ST7789_MADCTL);
-    LCD_writeDataByte(MADCTL_BGR);
+    LCD_writeDataByte(MADCTL_MX | MADCTL_MV);
 
-    /* Gamma positive (14 bytes) */
+    /* Interface pixel format: 16-bit RGB565 */
+    LCD_writeCmd(ST7789_COLMOD);
+    LCD_writeDataByte(0x55);
+
+    /* LCM control */
+    LCD_writeCmd(ST7789_LCMCTRL);
+    LCD_writeDataByte(0x2C);
+
+    /* Gamma set: curve 1 */
+    LCD_writeCmd(ST7789_GAMSET);
+    LCD_writeDataByte(0x01);
+
+    /* Display inversion on: required by this ST7789 panel */
+    LCD_writeCmd(ST7789_INVON);
+
+    /* Positive gamma correction (14 bytes) */
     LCD_writeCmd(ST7789_GMCTRP1);
     {
         const uint8_t gpos[] = {
-            0xD0, 0x00, 0x02, 0x07, 0x0A, 0x28,
-            0x32, 0x44, 0x42, 0x06, 0x0E, 0x12, 0x14, 0x17
+            0xD0, 0x03, 0x08, 0x0B, 0x0F, 0x2C,
+            0x41, 0x54, 0x4A, 0x07, 0x0E, 0x0C, 0x1E, 0x23
         };
         LCD_writeData(gpos, sizeof(gpos));
     }
 
-    /* Gamma negative (14 bytes) */
+    /* Negative gamma correction (14 bytes) */
     LCD_writeCmd(ST7789_GMCTRN1);
     {
         const uint8_t gneg[] = {
-            0xD0, 0x00, 0x02, 0x07, 0x0A, 0x28,
-            0x31, 0x54, 0x47, 0x0E, 0x1C, 0x17, 0x1B, 0x1E
+            0xD0, 0x03, 0x09, 0x0B, 0x0D, 0x19,
+            0x3C, 0x54, 0x4F, 0x0E, 0x1D, 0x1C, 0x20, 0x22
         };
         LCD_writeData(gneg, sizeof(gneg));
     }
 
-    /* Display inversion ON: corrects ST7789's natural colour inversion */
-    LCD_writeCmd(ST7789_INVON);
+    /* RAM control */
+    LCD_writeCmd(ST7789_RAMCTRL);
+    {
+        const uint8_t d[] = {0x00, 0xF8};
+        LCD_writeData(d, sizeof(d));
+    }
 
-    /* Normal display mode */
-    LCD_writeCmd(ST7789_NORON);
-    usleep(10000);
+    /* Sleep out - datasheet requires min 120 ms before next command */
+    LCD_writeCmd(ST7789_SLPOUT);
+    usleep(120000);
 
     /* Display on */
     LCD_writeCmd(ST7789_DISPON);
@@ -221,13 +244,25 @@ void LCD_init(void)
  * ----------------------------------------------------------------------- */
 static void LCD_setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 {
+    uint8_t data[4];
+
+    /*Column addresses*/
+    data[0] = (x0 >> 8) & 0xFF;
+    data[1] = x0 & 0xFF;
+    data[2] = (x1 >> 8) & 0xFF;
+    data[3] = x1 & 0xFF;
+
     LCD_writeCmd(ST7789_CASET);
-    LCD_writeDataByte((uint8_t)(x0 >> 8)); LCD_writeDataByte((uint8_t)(x0 & 0xFF));
-    LCD_writeDataByte((uint8_t)(x1 >> 8)); LCD_writeDataByte((uint8_t)(x1 & 0xFF));
+    LCD_writeData(data, 4);
+
+    /*Page addresses*/
+    data[0] = (y0 >> 8) & 0xFF;
+    data[1] = y0 & 0xFF;
+    data[2] = (y1 >> 8) & 0xFF;
+    data[3] = y1 & 0xFF;
 
     LCD_writeCmd(ST7789_RASET);
-    LCD_writeDataByte((uint8_t)(y0 >> 8)); LCD_writeDataByte((uint8_t)(y0 & 0xFF));
-    LCD_writeDataByte((uint8_t)(y1 >> 8)); LCD_writeDataByte((uint8_t)(y1 & 0xFF));
+    LCD_writeData(data, 4);
 
     LCD_writeCmd(ST7789_RAMWR);
 }
@@ -275,21 +310,11 @@ void LCD_drawRegion(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
 {
     LCD_setAddrWindow(x0, y0, x1, y1);
 
-#define REGION_CHUNK 64
-    uint8_t buf[REGION_CHUNK * 2];
     int total = (int)(x1 - x0 + 1) * (int)(y1 - y0 + 1);
 
     LCD_dc_hi();
     LCD_cs_lo();
-    for (int i = 0; i < total; i += REGION_CHUNK) {
-        int n = total - i;
-        if (n > REGION_CHUNK) n = REGION_CHUNK;
-        for (int j = 0; j < n; j++) {
-            buf[j * 2]     = (uint8_t)(pixels[i + j] >> 8);
-            buf[j * 2 + 1] = (uint8_t)(pixels[i + j] & 0xFF);
-        }
-        LCD_spiWrite(buf, (size_t)(n * 2));
-    }
+    LCD_spiWrite((uint8_t *)pixels, (size_t)(total * 2));
     LCD_cs_hi();
 }
 

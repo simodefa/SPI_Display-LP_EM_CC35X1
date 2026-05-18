@@ -16,8 +16,8 @@
 #include <stdint.h>
 
 /* Display dimensions */
-#define LCD_WIDTH   240
-#define LCD_HEIGHT  320
+#define LCD_WIDTH   320
+#define LCD_HEIGHT  240
 
 /* RGB565 color helpers */
 #define LCD_COLOR_BLACK   0x0000u

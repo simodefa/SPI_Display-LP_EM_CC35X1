@@ -15,9 +15,9 @@
  */
 
 /* --- Display controller (pick one) --- */
-// #define USE_ST7789
+#define USE_ST7789
 // #define USE_ST7735
-#define USE_ILI9341
+// #define USE_ILI9341
 
 /* --- Optional: LVGL rendering engine --- */
 #define USE_LVGL
