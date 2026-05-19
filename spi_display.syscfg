@@ -18,7 +18,6 @@ const GPIO2     = GPIO.addInstance();
 const GPIO3     = GPIO.addInstance();
 const GPIO4     = GPIO.addInstance();
 const GPIO5     = GPIO.addInstance();
-const GPIO6     = GPIO.addInstance();
 const Power     = scripting.addModule("/ti/drivers/Power");
 const SPI       = scripting.addModule("/ti/drivers/SPI");
 const SPI1      = SPI.addInstance();
@@ -38,26 +37,25 @@ GPIO1.gpioPin.$assign = "boosterpack.40";
 GPIO2.$name           = "CONFIG_SPI_PERIPHERAL_READY";
 GPIO2.gpioPin.$assign = "boosterpack.19";
 
-GPIO3.$name           = "CONFIG_GPIO_LCD_CS";
-GPIO3.gpioPin.$assign = "boosterpack.13";
+GPIO3.$name           = "CONFIG_GPIO_LCD_DC";
+GPIO3.gpioPin.$assign = "boosterpack.31";
 
-GPIO4.$name           = "CONFIG_GPIO_LCD_DC";
-GPIO4.gpioPin.$assign = "boosterpack.31";
+GPIO4.$name           = "CONFIG_GPIO_LCD_RST";
+GPIO4.gpioPin.$assign = "boosterpack.17";
 
-GPIO5.$name           = "CONFIG_GPIO_LCD_RST";
-GPIO5.gpioPin.$assign = "boosterpack.17";
-
-GPIO6.$name           = "CONFIG_GPIO_TRACE";
-GPIO6.mode            = "Output";
-GPIO6.gpioPin.$assign = "boosterpack.38";
+GPIO5.$name           = "CONFIG_GPIO_TRACE";
+GPIO5.mode            = "Output";
+GPIO5.gpioPin.$assign = "boosterpack.38";
 
 Power.policyFunction = "PowerWFF3_doWFI";
 
 SPI1.$name                    = "CONFIG_SPI_LCD";
+SPI1.mode                     = "Four Pin CS Active Low";
 SPI1.spi.sclkPin.$assign      = "boosterpack.7";
 SPI1.spi.dmaRxChannel.$assign = "DMA_CH11";
 SPI1.spi.dmaTxChannel.$assign = "DMA_CH10";
 SPI1.spi.picoPin.$assign      = "boosterpack.15";
+SPI1.spi.csnPin.$assign       = "boosterpack.18";
 
 ActionReq.ota             = true;
 ActionReq.activation_type = "authentication_bypass";

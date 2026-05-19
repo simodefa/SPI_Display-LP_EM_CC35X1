@@ -368,7 +368,6 @@ void *mainThread(void *arg0)
     GPIO_setConfig(CONFIG_GPIO_LED_1, GPIO_CFG_OUT_STD | GPIO_CFG_OUT_LOW);
 
     /* Configure LCD control pins as outputs */
-    GPIO_setConfig(CONFIG_GPIO_LCD_CS, GPIO_CFG_OUT_STD | GPIO_CFG_OUT_HIGH);
     GPIO_setConfig(CONFIG_GPIO_LCD_DC, GPIO_CFG_OUT_STD | GPIO_CFG_OUT_LOW);
     GPIO_setConfig(CONFIG_GPIO_LCD_RST, GPIO_CFG_OUT_STD | GPIO_CFG_OUT_HIGH);
 

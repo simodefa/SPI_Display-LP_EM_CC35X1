@@ -70,8 +70,6 @@ static SPI_Handle  gSpiHandle = NULL;
 /* -----------------------------------------------------------------------
  * Low-level helpers
  * ----------------------------------------------------------------------- */
-static void LCD_cs_lo(void)  { GPIO_write(CONFIG_GPIO_LCD_CS,  0); }
-static void LCD_cs_hi(void)  { GPIO_write(CONFIG_GPIO_LCD_CS,  1); }
 static void LCD_dc_lo(void)  { GPIO_write(CONFIG_GPIO_LCD_DC,  0); } /* command */
 static void LCD_dc_hi(void)  { GPIO_write(CONFIG_GPIO_LCD_DC,  1); } /* data    */
 static void LCD_rst_lo(void) { GPIO_write(CONFIG_GPIO_LCD_RST, 0); }
@@ -93,17 +91,13 @@ static void LCD_spiWrite(const uint8_t *buf, size_t len)
 static void LCD_writeCmd(uint8_t cmd)
 {
     LCD_dc_lo();
-    LCD_cs_lo();
     LCD_spiWrite(&cmd, 1);
-    LCD_cs_hi();
 }
 
 static void LCD_writeData(const uint8_t *data, size_t len)
 {
     LCD_dc_hi();
-    LCD_cs_lo();
     LCD_spiWrite(data, len);
-    LCD_cs_hi();
 }
 
 static void LCD_writeDataByte(uint8_t b)
@@ -329,11 +323,9 @@ void LCD_fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color)
     }
 
     LCD_dc_hi();
-    LCD_cs_lo();
     for (int r = 0; r < h; r++) {
         LCD_spiWrite(row, (size_t)(w * 2));
     }
-    LCD_cs_hi();
 }
 
 /* -----------------------------------------------------------------------
@@ -353,9 +345,7 @@ void LCD_drawRegion(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
     trace_hi();
 
     LCD_dc_hi();
-    LCD_cs_lo();
     LCD_spiWrite((uint8_t *)pixels, (size_t)(total * 2));
-    LCD_cs_hi();
 
     trace_lo();
 }
@@ -377,7 +367,6 @@ void LCD_drawContentFrame(const uint16_t *frame, uint8_t yOffset, uint8_t conten
     int total = (int)frameWidth * contentHeight;
 
     LCD_dc_hi();
-    LCD_cs_lo();
     for (int i = 0; i < total; i += CHUNK_PIXELS) {
         int n = total - i;
         if (n > CHUNK_PIXELS) n = CHUNK_PIXELS;
@@ -387,7 +376,6 @@ void LCD_drawContentFrame(const uint16_t *frame, uint8_t yOffset, uint8_t conten
         }
         LCD_spiWrite(buf, (size_t)(n * 2));
     }
-    LCD_cs_hi();
 }
 
 /* -----------------------------------------------------------------------
@@ -403,7 +391,6 @@ void LCD_drawImage(const uint16_t *image)
     int total = LCD_WIDTH * LCD_HEIGHT;
 
     LCD_dc_hi();
-    LCD_cs_lo();
     for (int i = 0; i < total; i += CHUNK_PIXELS) {
         int n = total - i;
         if (n > CHUNK_PIXELS) n = CHUNK_PIXELS;
@@ -413,7 +400,6 @@ void LCD_drawImage(const uint16_t *image)
         }
         LCD_spiWrite(buf, (size_t)(n * 2));
     }
-    LCD_cs_hi();
 }
 
 #endif /* USE_ILI9341 */
