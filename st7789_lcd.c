@@ -350,4 +350,20 @@ void LCD_drawImage(const uint16_t *image)
     LCD_cs_hi();
 }
 
+/* -----------------------------------------------------------------------
+ * Async-compatible wrappers — synchronous fallback (no DMA path on ST7789).
+ * LCD_drawRegionAsync completes the transfer inline; LCD_waitDmaDone is
+ * a no-op because there is nothing left to wait for.
+ * ----------------------------------------------------------------------- */
+void LCD_drawRegionAsync(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
+                         const uint16_t *pixels)
+{
+    LCD_drawRegion(x0, y0, x1, y1, pixels);
+}
+
+void LCD_waitDmaDone(void)
+{
+    /* No-op: transfer already completed in LCD_drawRegionAsync */
+}
+
 #endif /* USE_ST7789 */

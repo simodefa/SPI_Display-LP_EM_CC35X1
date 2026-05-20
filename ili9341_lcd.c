@@ -18,6 +18,10 @@
 #include <ti/drivers/GPIO.h>
 #include "ti_drivers_config.h"
 
+/* FreeRTOS — semaphore used to synchronise SPI DMA completion */
+#include <FreeRTOS.h>
+#include <semphr.h>
+
 /* -----------------------------------------------------------------------
  * ILI9341 command definitions (ILI9341 datasheet opcodes)
  * ----------------------------------------------------------------------- */
@@ -65,7 +69,26 @@
 /* -----------------------------------------------------------------------
  * Module-private state
  * ----------------------------------------------------------------------- */
-static SPI_Handle  gSpiHandle = NULL;
+static SPI_Handle        gSpiHandle  = NULL;
+
+/*
+ * gSpiDoneSem is a binary semaphore posted by the SPI ISR callback every
+ * time a transfer completes. LCD_spiWrite() takes it to block until each
+ * small command/data transfer finishes. LCD_waitDmaDone() takes it to
+ * block until the large pixel DMA transfer finishes.
+ */
+static SemaphoreHandle_t gSpiDoneSem = NULL;
+
+/* -----------------------------------------------------------------------
+ * SPI ISR callback — called by the TI SPI driver from interrupt context
+ * when any transfer (sync command or async pixel DMA) completes.
+ * ----------------------------------------------------------------------- */
+static void lcd_spi_callback(SPI_Handle handle, SPI_Transaction *transaction)
+{
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(gSpiDoneSem, &xHigherPriorityTaskWoken);
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
 
 /* -----------------------------------------------------------------------
  * Low-level helpers
@@ -85,7 +108,11 @@ static void LCD_spiWrite(const uint8_t *buf, size_t len)
     xfer.count   = len;
     xfer.txBuf   = (void *)buf;
     xfer.rxBuf   = NULL;
+    /* In SPI_MODE_CALLBACK, SPI_transfer() returns immediately and the
+     * ISR callback posts gSpiDoneSem when done.  Block here so callers
+     * see synchronous behaviour for all command/setup transfers. */
     SPI_transfer(gSpiHandle, &xfer);
+    xSemaphoreTake(gSpiDoneSem, portMAX_DELAY);
 }
 
 static void LCD_writeCmd(uint8_t cmd)
@@ -111,12 +138,22 @@ static void LCD_writeDataByte(uint8_t b)
  * ----------------------------------------------------------------------- */
 void LCD_init(void)
 {
+    /* Create the semaphore that the ISR callback posts on every transfer end */
+    gSpiDoneSem = xSemaphoreCreateBinary();
+    if (gSpiDoneSem == NULL) {
+        while (1) {}   /* insufficient heap */
+    }
+
     SPI_Params spiParams;
     SPI_Params_init(&spiParams);
-    spiParams.bitRate     = 80000000;
-    spiParams.frameFormat = SPI_POL1_PHA1;
-    spiParams.mode        = SPI_CONTROLLER;
-    spiParams.dataSize    = 8;
+    spiParams.bitRate              = 80000000;
+    spiParams.frameFormat          = SPI_POL1_PHA1;
+    spiParams.mode                 = SPI_CONTROLLER;
+    spiParams.dataSize             = 8;
+    /* Callback mode: SPI_transfer() returns immediately; the ISR callback
+     * (lcd_spi_callback) posts gSpiDoneSem when the DMA transfer is done. */
+    spiParams.transferMode         = SPI_MODE_CALLBACK;
+    spiParams.transferCallbackFxn  = lcd_spi_callback;
     gSpiHandle = SPI_open(CONFIG_SPI_LCD, &spiParams);
     /* SPI_open() returns NULL if the peripheral is unavailable.
      * Trap here rather than silently hard-faulting on the first SPI transfer. */
@@ -400,6 +437,45 @@ void LCD_drawImage(const uint16_t *image)
         }
         LCD_spiWrite(buf, (size_t)(n * 2));
     }
+}
+
+/* -----------------------------------------------------------------------
+ * Asynchronous DMA pixel transfer — used by the LVGL flush thread.
+ *
+ * Sets the address window (blocking) then starts the SPI DMA transfer
+ * for the pixel data and returns immediately.  The ISR callback will
+ * post gSpiDoneSem when the DMA finishes; call LCD_waitDmaDone() to
+ * block until then.
+ *
+ * pixels must be big-endian RGB565 (produced with
+ * LV_COLOR_FORMAT_RGB565_SWAPPED — no byte-swap needed here).
+ * ----------------------------------------------------------------------- */
+void LCD_drawRegionAsync(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
+                         const uint16_t *pixels)
+{
+    /* Address window setup uses blocking synchronous transfers */
+    LCD_setAddrWindow(x0, y0, x1, y1);
+
+    int total = (int)(x1 - x0 + 1) * (int)(y1 - y0 + 1);
+
+    LCD_dc_hi();   /* data phase */
+
+    /* Launch the DMA transfer — returns immediately; ISR posts gSpiDoneSem */
+    SPI_Transaction xfer;
+    memset(&xfer, 0, sizeof(xfer));
+    xfer.count  = (size_t)(total * 2);
+    xfer.txBuf  = (void *)pixels;
+    xfer.rxBuf  = NULL;
+    SPI_transfer(gSpiHandle, &xfer);
+    /* Do NOT take gSpiDoneSem here — caller calls LCD_waitDmaDone() */
+}
+
+/* -----------------------------------------------------------------------
+ * Block until the DMA transfer started by LCD_drawRegionAsync() finishes.
+ * ----------------------------------------------------------------------- */
+void LCD_waitDmaDone(void)
+{
+    xSemaphoreTake(gSpiDoneSem, portMAX_DELAY);
 }
 
 #endif /* USE_ILI9341 */
