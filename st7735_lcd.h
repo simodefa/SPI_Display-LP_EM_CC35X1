@@ -64,20 +64,6 @@ void LCD_drawRegion(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
                     const uint16_t *pixels);
 
 /**
- * Synchronous fallback for LCD_drawRegionAsync on ST7735.
- * Performs the SPI transfer inline (no true DMA on this driver path)
- * and returns once the transfer is complete.
- */
-void LCD_drawRegionAsync(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
-                         const uint16_t *pixels);
-
-/**
- * No-op for ST7735: LCD_drawRegionAsync completes synchronously,
- * so there is nothing to wait for.
- */
-void LCD_waitDmaDone(void);
-
-/**
  * Blit a partial-height RGB565 frame into a horizontal band on the display.
  * Used to update only the animated content rows while leaving the black
  * border rows untouched.

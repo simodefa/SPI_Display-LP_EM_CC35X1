@@ -63,27 +63,6 @@ void LCD_drawRegion(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
                     const uint16_t *pixels);
 
 /**
- * Start an asynchronous DMA pixel transfer to the display.
- * Sets the address window (blocking) then launches the SPI DMA transfer
- * and returns immediately.  Call LCD_waitDmaDone() to block until done.
- *
- * pixels must be big-endian RGB565 (i.e. produced with
- * LV_COLOR_FORMAT_RGB565_SWAPPED so that no byte-swap is needed).
- *
- * @param x0,y0  top-left pixel (inclusive)
- * @param x1,y1  bottom-right pixel (inclusive)
- * @param pixels pointer to (x1-x0+1)*(y1-y0+1) RGB565 values, row-major
- */
-void LCD_drawRegionAsync(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1,
-                         const uint16_t *pixels);
-
-/**
- * Block the calling task until the DMA transfer started by
- * LCD_drawRegionAsync() has completed.
- */
-void LCD_waitDmaDone(void);
-
-/**
  * Blit a partial-height RGB565 frame into a horizontal band on the display.
  * @param frame          pointer to frameWidth * contentHeight uint16_t pixels
  * @param yOffset        first row on the display to write (0-based)

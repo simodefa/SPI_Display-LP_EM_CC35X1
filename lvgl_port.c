@@ -6,10 +6,10 @@
  * What this file does:
  *   - Creates an lv_display_t backed by two partial draw buffers
  *   - A dedicated flush task handles every band flush:
- *       1. Waits for a flush request from the LVGL task
- *       2. Starts a DMA SPI transfer via LCD_drawRegionAsync()
- *       3. Blocks on LCD_waitDmaDone() until the DMA finishes
- *       4. Calls lv_display_flush_ready() so LVGL can reuse the buffer
+ *       1. Waits for a flush request from the LVGL task (gFlushReqSem)
+ *       2. Calls LCD_drawRegion() — synchronous but SPI uses DMA internally;
+ *          the flush task blocks until the transfer is fully done
+ *       3. Gives gFlushDoneSem to unblock the LVGL task's flush_wait_cb
  *   - Provides a 1 ms tick source via lv_tick_set_cb()
  *
  * Double-buffer strategy:
@@ -20,7 +20,8 @@
  *
  * Thread model:
  *   LVGL task   →  lvgl_flush_cb() posts gFlushReqSem, returns immediately
- *   Flush task  →  wakes on gFlushReqSem, runs DMA, calls flush_ready()
+ *   LVGL task   →  lvgl_flush_wait_cb() takes gFlushDoneSem (blocks until done)
+ *   Flush task  →  wakes on gFlushReqSem, runs DMA, gives gFlushDoneSem
  */
 
 #include "display_config.h"
@@ -37,8 +38,7 @@
 #include <task.h>
 #include <semphr.h>
 
-/* Pull in the active LCD driver header (LCD_WIDTH, LCD_HEIGHT,
- * LCD_drawRegionAsync, LCD_waitDmaDone) */
+/* Pull in the active LCD driver header (LCD_WIDTH, LCD_HEIGHT, LCD_drawRegion) */
 #ifdef USE_ST7789
 #include "st7789_lcd.h"
 #elif defined(USE_ST7735)
@@ -62,7 +62,7 @@ static uint32_t lvgl_tick_cb(void)
  *   ST7789   240 px wide, 10 lines → 4 800 B per buffer ( 9 600 B total)
  *   ST7735   128 px wide, 10 lines → 2 560 B per buffer ( 5 120 B total)
  */
-#define LV_DRAW_BUF_LINES 10
+#define LV_DRAW_BUF_LINES 120
 
 static lv_color_t draw_buf[LCD_WIDTH * LV_DRAW_BUF_LINES];
 static lv_color_t draw_buf2[LCD_WIDTH * LV_DRAW_BUF_LINES];
@@ -74,6 +74,11 @@ static lv_color_t draw_buf2[LCD_WIDTH * LV_DRAW_BUF_LINES];
 /* Binary semaphore: LVGL task posts it when a band is ready to flush.
  * Flush task blocks on it, then does the DMA transfer. */
 static SemaphoreHandle_t gFlushReqSem;
+
+/* Binary semaphore: flush task gives it when the DMA is complete.
+ * LVGL task blocks on it inside lvgl_flush_wait_cb before starting
+ * the next band flush. */
+static SemaphoreHandle_t gFlushDoneSem;
 
 /* LVGL display handle, flush rectangle, and pixel pointer — written by
  * lvgl_flush_cb (LVGL task) and read by lvgl_flush_task (flush task).
@@ -87,8 +92,8 @@ static const uint8_t *gFlushPixmap;
  * Flush callback (called from the LVGL task)
  *
  * Stores the dirty rectangle and pixel buffer then wakes the flush task.
- * Does NOT call lv_display_flush_ready() — the flush task does that after
- * the DMA transfer completes.
+ * lv_display_flush_ready() is NOT called here — LVGL v9 clears
+ * disp->flushing itself after lvgl_flush_wait_cb() returns.
  * ----------------------------------------------------------------------- */
 static void lvgl_flush_cb(lv_display_t *disp,
                           const lv_area_t *area,
@@ -101,14 +106,23 @@ static void lvgl_flush_cb(lv_display_t *disp,
 }
 
 /* -----------------------------------------------------------------------
+ * Flush-wait callback (called from the LVGL task by wait_for_flushing())
+ *
+ * LVGL v9 calls this — instead of spinning — when it needs to wait for the
+ * previous flush to finish before starting the next one.  We block on
+ * gFlushDoneSem, which the flush task gives after the DMA is complete.
+ * LVGL itself clears disp->flushing = 0 immediately after this returns.
+ * ----------------------------------------------------------------------- */
+static void lvgl_flush_wait_cb(lv_display_t *disp)
+{
+    (void)disp;
+    xSemaphoreTake(gFlushDoneSem, portMAX_DELAY);
+}
+
+/* -----------------------------------------------------------------------
  * Flush task
  *
  * Dedicated high-priority task that serialises all SPI transfers.
- * For ILI9341, LCD_drawRegionAsync() launches a DMA transfer and returns
- * immediately; LCD_waitDmaDone() blocks until the ISR signals completion.
- * For ST7789 / ST7735, both calls are synchronous (the SPI is not yet
- * running in DMA mode on those drivers), but the separate thread still
- * allows LVGL to render the next band in parallel on the CPU.
  * ----------------------------------------------------------------------- */
 #define FLUSH_TASK_STACK_WORDS  512u
 #define FLUSH_TASK_PRIORITY     (configMAX_PRIORITIES - 1u)
@@ -124,17 +138,19 @@ static void lvgl_flush_task(void *arg)
         /* Wait until LVGL has rendered a band and posted gFlushReqSem */
         xSemaphoreTake(gFlushReqSem, portMAX_DELAY);
 
-        /* Start the DMA pixel transfer (returns immediately on ILI9341) */
-        LCD_drawRegionAsync(
+        /* Transfer the band to the display. LCD_drawRegion() is
+         * synchronous: it blocks this task until the SPI (DMA) transfer
+         * is complete, freeing the CPU for the LVGL task to render the
+         * next band in parallel. */
+        LCD_drawRegion(
             (uint16_t)gFlushArea.x1, (uint16_t)gFlushArea.y1,
             (uint16_t)gFlushArea.x2, (uint16_t)gFlushArea.y2,
             (const uint16_t *)gFlushPixmap);
 
-        /* Block until DMA (or synchronous SPI) is done */
-        LCD_waitDmaDone();
-
-        /* Release the buffer back to LVGL — it may now render the next band */
-        lv_display_flush_ready(gDisplay);
+        /* Wake the LVGL task waiting in lvgl_flush_wait_cb().
+         * lv_display_flush_ready() is NOT needed: LVGL v9 clears
+         * disp->flushing itself after the wait callback returns. */
+        xSemaphoreGive(gFlushDoneSem);
     }
 }
 
@@ -148,6 +164,10 @@ void lvgl_port_init(void)
     /* Semaphore starts empty; flush task blocks until LVGL posts to it */
     gFlushReqSem = xSemaphoreCreateBinary();
 
+    /* Semaphore starts empty; LVGL task blocks in flush_wait_cb until
+     * the flush task posts it after each DMA completes */
+    gFlushDoneSem = xSemaphoreCreateBinary();
+
     /* Create display object matching physical dimensions */
     lv_display_t *disp = lv_display_create(LCD_WIDTH, LCD_HEIGHT);
 
@@ -156,6 +176,11 @@ void lvgl_port_init(void)
 
     /* Register flush callback */
     lv_display_set_flush_cb(disp, lvgl_flush_cb);
+
+    /* Register flush-wait callback so LVGL yields (via FreeRTOS) while
+     * waiting for DMA to complete, instead of spinning and starving the
+     * flush task. */
+    lv_display_set_flush_wait_cb(disp, lvgl_flush_wait_cb);
 
     /*
      * Double-buffered partial rendering:
